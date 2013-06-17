@@ -1,0 +1,7 @@
+[Core]
+Name = PagerDuty
+Module = pagerduty
+
+[Documentation]
+Description = A plugin for interacting with PagerDuty
+
