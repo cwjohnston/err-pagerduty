@@ -3,10 +3,12 @@ from errbot.utils import get_sender_username
 from operator import itemgetter
 from urllib2 import HTTPError
 from datetime import datetime, timedelta
+from tzlocal import get_localzone
 import logging
 import pygerduty
 import requests
 import json
+import pytz
 
 
 class PagerDuty(BotPlugin):
@@ -23,7 +25,8 @@ class PagerDuty(BotPlugin):
         return {'SUBDOMAIN': "myorg",
                 'API_KEY': "secret",
                 'SERVICE_API_KEY': "secret",
-                'SCHEDULE_ID': "someschedule"}
+                'SCHEDULE_ID': "someschedule",
+                'SCHEDULE_TIMEZONE': 'Etc/UTC'}
 
     def get_triggered_incidents(self):
         triggered_incidents = self.pager.incidents.list(status='triggered')
@@ -293,7 +296,7 @@ class PagerDuty(BotPlugin):
                 return "Sorry, you need to use group chat for PagerDuty commands"
             else:
                 if len(args) <= 0:
-                    return "Sorry, you need to specify the number of hours for which you'd like to steal the pager"
+                    return "Sorry, you need to specify the number of minutes for which you'd like to steal the pager"
                 else:
                     requestor_name = get_sender_username(mess)
                     users = self.get_users()
@@ -311,7 +314,10 @@ class PagerDuty(BotPlugin):
                     if requestor['pd_id'] == self.get_oncall_pd_id(schedule_id):
                         return "Sorry, you are already on call"
                     else:
-                        now = datetime.now()
+                        local_tz = get_localzone()
+                        schedule_tz = pytz.timezone(self.config['SCHEDULE_TIMEZONE'])
+                        local_dt = local_tz.localize(datetime.now())
+                        now = local_dt.astimezone(schedule_tz)
                         later = now + timedelta(minutes=override_duration)
                         try:
                             schedule = self.pager.schedules.show(schedule_id)
